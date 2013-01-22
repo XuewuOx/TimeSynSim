@@ -148,19 +148,6 @@ void Nodo::handleMasterMessage(cMessage *msg){
 	}
 }
 
-void Nodo::handleDelayResponse(){
-	ev<<"\nhandleDelayResponse called by handleMasterMessage.\n";
-	//error("\nhandleDelayResponse called by handleMasterMessage.\n");
-	dsm = ts_m_dreq - ts_s_dreq;
-	dprop = (dms + dsm)/2;
-}
-
-void Nodo::handleSync(){
-	ev<<"dsm="<<dsm<<"dms"<<dms<<"dprop"<<dprop<<"\n";
-	dms = ts_s_sync - ts_m_sync;
-	offset = dms - dprop;
-	servo_clock();
-}
 
 void Nodo::finish(){}
 
