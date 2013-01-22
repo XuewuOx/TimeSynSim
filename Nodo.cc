@@ -147,7 +147,16 @@ void Nodo::handleMasterMessage(cMessage *msg){
 			error("Invalid master message\n");
 	}
 }
-
+void Nodo::ProduceT3packet(){
+	//ev<<"current simulation time ="<<simTime()<<endl;
+	Packet *pck = new Packet("DREQ_TIME_REQ");
+	pck->setPckType(PTP);
+	pck->setSource(address);
+	pck->setDestination(master);
+	pck->setPtpType(DREQ);
+	pck->setClockType(TIME_REQ);
+	send(pck,"outclock");
+}
 
 void Nodo::finish(){}
 
