@@ -46,7 +46,7 @@ void Nodo::initialize(){
 	master = masterModule->getId();
 	
 	/* Inizializzazione del timer.	*/
-	scheduleAt(simTime()+intuniform(Tsync,14*Tsync)+CONSTDELAY, new cMessage("SLtimer"));
+	//scheduleAt(simTime()+intuniform(Tsync,14*Tsync)+CONSTDELAY, new cMessage("SLtimer"));
 
 	/* Registrazione nodo nella rete. */
 	Packet * temp = new Packet("REGISTER");
@@ -73,7 +73,7 @@ void Nodo::handleMessage(cMessage *msg){
 	delete msg;
 	if(ev.isGUI()){updateDisplay();}
 }
-
+//ToDo Modify handleSelfMessage()
 void Nodo::handleSelfMessage(cMessage *msg){
 	Packet *pck = new Packet("DREQ_TIME_REQ");
 	pck->setPckType(PTP);
