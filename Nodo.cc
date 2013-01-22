@@ -138,7 +138,10 @@ void Nodo::handleMasterMessage(cMessage *msg){
 			ts_m_dreq = ((Packet *)msg)->getData();
 			ev<<"The time of T4:"<<endl;
             ev<<"T4="<<ts_m_dreq<<endl;
-			handleDelayResponse();
+			//printf("  %10f\r\n", ts_m_sync));
+			//ev<<"ts_s_sync="<<ts_s_sync<<" ts_m_sync="<<ts_m_sync<<endl;
+			//ev<<"ts_m_dreq="<<ts_m_dreq<<" ts_s_dreq="<<ts_s_dreq<<endl;
+			servo_clock();
 			break;
 		case DREQ:
 			error("Invalid master message\n");
