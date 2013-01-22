@@ -75,16 +75,12 @@ void Nodo::handleMessage(cMessage *msg){
 }
 //ToDo Modify handleSelfMessage()
 void Nodo::handleSelfMessage(cMessage *msg){
-	Packet *pck = new Packet("DREQ_TIME_REQ");
-	pck->setPckType(PTP);
-	pck->setSource(address);
-	pck->setDestination(master);
-	pck->setPtpType(DREQ);
-	pck->setClockType(TIME_REQ);
-	send(pck,"outclock");
-	scheduleAt(simTime()+intuniform(Tsync,14*Tsync)+CONSTDELAY, new cMessage("SLtimer"));
+	            ProduceT3packet();
+				dsmVec.record(dsm);
+				dpropVec.record(dprop);
+				dmsVec.record(dms);
+				offsetVec.record(offset);
 }
-
 void Nodo::handleOtherPacket(cMessage *msg){}
 
 void Nodo::handleEventMessage(cMessage *msg){
@@ -108,14 +104,9 @@ void Nodo::handleClockMessage(cMessage *msg){
 			ts_s_sync =SIMTIME_DBL(msg->getTimestamp());
 			ev<<"The time of T2:"<<endl;
             ev<<"T2="<<ts_s_sync<<endl;
-			handleSync();
-			/*********************************
-			 **    Salvataggio valori.      **
-			 *********************************/
-			dsmVec.record(dsm);
-			dpropVec.record(dprop);
-			dmsVec.record(dms);
-			offsetVec.record(offset);
+			//ev<<"current simulation time ="<<simTime()<<endl;
+			// TODO:schudule delay
+		   scheduleAt(simTime()+uniform(0,0.1), new cMessage("SLtimer"));
 			break;
 		case DREQ:
 			ts_s_dreq = SIMTIME_DBL(msg->getTimestamp());
