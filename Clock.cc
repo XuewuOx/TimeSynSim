@@ -37,16 +37,21 @@ private:
 	double getTimestamp();
 	void adjtimex(double value, int type);
 	double origine;
+	double phyclock;
+	double servoclock;
+	double phyoffset;
+	double phydrift;
 	double offset;
 	double drift;
 	double sigma1;
-	double sigma;
-	double p;
-	double delta;
+	double sigma2;
+	//double sigma;
+	//double p;
+	//double delta;
 	double Tcamp;
 	ofstream outFile;
-	cOutVector timestampVec;
-	cOutVector noiseVec;
+	//cOutVector timestampVec;
+	cOutVector sigma1Vec;
 	cOutVector driftVec;
 	cOutVector offsetVec;
 };
@@ -57,7 +62,7 @@ void Clock::initialize(){
 	// ---------------------------------------------------------------------------
 	// Inizializzazione variabile per il salvataggio dei dati in uscita.
 	// ---------------------------------------------------------------------------
-	timestampVec.setName("time value");
+	//timestampVec.setName("time value");
 	noiseVec.setName("sigma1");
 	driftVec.setName("drift");
 	offsetVec.setName("offset");
@@ -65,15 +70,18 @@ void Clock::initialize(){
 	// ---------------------------------------------------------------------------
 	// Lettura parametri di ingresso.
 	// ---------------------------------------------------------------------------
-	offset = par("offset");
-	drift  = par("drift");
+	phyoffset = par("offset");
+	phydrift =  par("drift");
 	sigma1  = par("sigma1");
-	p	   = par("spikeprob");
-	delta  = par("spikeampl");
+	sigma2 = par("sigma2");
+	sigma3 = par("sigma3");
+	//p	   = par("spikeprob");
+	//delta  = par("spikeampl");
 	Tcamp  = par("Tcamp");
 	// ---------------------------------------------------------------------------
 	// Lettura parametri di ingresso.
 	// ---------------------------------------------------------------------------
+	phyclock = servoclock = 0;
 	origine = SIMTIME_DBL(simTime());
 	openfile();
 	// ---------------------------------------------------------------------------
@@ -94,13 +102,14 @@ void Clock::handleMessage(cMessage *msg){
 	// ---------------------------------------------------------------------------
 		//double temp = offset + (1+drift)*(SIMTIME_DBL(simTime())-origine)-SIMTIME_DBL(simTime());
 		//timestampVec.record(temp);
+		Phyclockupdate();
 		driftVec.record(drift);
 		offsetVec.record(offset);
 		noiseVec.record(sigma1);
 		if(!outFile){
 			ev << "CLOCK: Errore apertura file" << endl;
 		}else{
-			outFile<<temp<<"\t"<<drift<<"\t"<<noise<<endl;	
+			outFile<<offset<<"\t"<<drift<<"\t"<<sigma1<<endl;
 		}
 		scheduleAt(simTime()+ Tcamp, new cMessage("CLTimer"));
 	}else{
@@ -135,22 +144,30 @@ void Clock::handleMessage(cMessage *msg){
 	delete msg;
 	if(ev.isGUI()){updateDisplay();}
 }
-
-
+// TODo:adding Phyclockupdate()
+double Clock::Phyclockupdate(){
+	drift = drift + sigma2;
+	offset = offset + drift*(SIMTIME_DBL(simTime())-lastupdatatime)+ sigma1;
+	phyclock = offset + SIMTIME_DBL(simTime());
+	lastupdatatime = SIMTIME_DBL(simTime());
+    return phyclock;
+}
 double Clock::getTimestamp(){
 	// ---------------------------------------------------------------------------
 	// Modello di timestamping + clock.
 	// ---------------------------------------------------------------------------
 	// Modello del clock
 	//double clock = offset + (1+drift)*(SIMTIME_DBL(simTime())-origine);
-	double clock = offset + drift*(SIMTIME_DBL(simTime())-origine) + SIMTIME_DBL(simTime());
+	//TODO:Modify
+	offset = offset + drift*(SIMTIME_DBL(simTime())-lastupdatatime)+ sigma1;
+	double clock = offset + SIMTIME_DBL(simTime());
 	// Modello di timestamping
-	noise = normal(0,sigma);
-	if(bernoulli(p)==1){
+	//noise = normal(0,sigma);
+	//if(bernoulli(p)==1){
 		// Simulazione degli spike.
-		noise = noise + delta;
-	}
-	return clock + noise;
+		//noise = noise + delta;
+	//}
+	return clock + sigma3;
 }
 
 void Clock::adjtimex(double value, int type){
@@ -161,7 +178,7 @@ void Clock::adjtimex(double value, int type){
 		ev << "CLOCK : AGGIORNAMENTO OFFSET" << endl;
 		ev << "CLOCK : offset- = " << offset;
 		//offset = offset + (1+drift)*(SIMTIME_DBL(simTime())-origine) - value;
-		offset = offset + drift*(SIMTIME_DBL(simTime())-origine) - value;
+		offset = offset + drift*(SIMTIME_DBL(simTime())-lastupdatatime)+ sigma1 - value;
 		ev << " offset+ = " << offset << endl;
 		ev << "CLOCK : origine- = " << origine;
 		origine = SIMTIME_DBL(simTime());
