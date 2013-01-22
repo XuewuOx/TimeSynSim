@@ -172,6 +172,16 @@ SERVO CLOCK IMPLEMENTATION.
 This function must be overwritten by the user.
 -------------------------------------------------------------------------------*/
 void Nodo::servo_clock(){	
+	dms = ts_s_sync - ts_m_sync;
+	dsm = ts_m_dreq - ts_s_dreq;
+	ev<<"dms="<<dms<<"dsm="<<dsm<<endl;
+	dprop = (dms + dsm)/2;
+	offset = dms - dprop;
+	ev<<"offset="<<offset<<endl;
+    double alpha = 1;
+    double beta = 64;
+    double y =offset/alpha;
+	ev<<"y="<<y<<endl;
 	double alpha = 1;
 	double beta = 64;
 	double y =offset/alpha;
