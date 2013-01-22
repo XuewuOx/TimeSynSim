@@ -39,7 +39,7 @@ private:
 	double origine;
 	double offset;
 	double drift;
-	double noise;
+	double sigma1;
 	double sigma;
 	double p;
 	double delta;
@@ -58,7 +58,7 @@ void Clock::initialize(){
 	// Inizializzazione variabile per il salvataggio dei dati in uscita.
 	// ---------------------------------------------------------------------------
 	timestampVec.setName("time value");
-	noiseVec.setName("noise");
+	noiseVec.setName("sigma1");
 	driftVec.setName("drift");
 	offsetVec.setName("offset");
 
@@ -67,7 +67,7 @@ void Clock::initialize(){
 	// ---------------------------------------------------------------------------
 	offset = par("offset");
 	drift  = par("drift");
-	sigma  = par("noise");
+	sigma1  = par("sigma1");
 	p	   = par("spikeprob");
 	delta  = par("spikeampl");
 	Tcamp  = par("Tcamp");
@@ -96,7 +96,7 @@ void Clock::handleMessage(cMessage *msg){
 		//timestampVec.record(temp);
 		driftVec.record(drift);
 		offsetVec.record(offset);
-		noiseVec.record(noise);
+		noiseVec.record(sigma1);
 		if(!outFile){
 			ev << "CLOCK: Errore apertura file" << endl;
 		}else{
