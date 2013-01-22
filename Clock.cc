@@ -70,8 +70,8 @@ void Clock::initialize(){
 	// ---------------------------------------------------------------------------
 	// Lettura parametri di ingresso.
 	// ---------------------------------------------------------------------------
-	phyoffset = par("offset");
-	phydrift =  par("drift");
+	offset = par("offset");
+	drift =  par("drift");
 	sigma1  = par("sigma1");
 	sigma2 = par("sigma2");
 	sigma3 = par("sigma3");
