@@ -34,24 +34,25 @@ protected:
 	virtual void openfile();
 	virtual void closefile();
 private:
+	double Phyclockupdate();
 	double getTimestamp();
 	void adjtimex(double value, int type);
-	double origine;
+	double lastupdatetime;
 	double phyclock;
-	double servoclock;
-	double phyoffset;
-	double phydrift;
+	double softclock;
 	double offset;
 	double drift;
 	double sigma1;
 	double sigma2;
-	//double sigma;
-	//double p;
-	//double delta;
+	double sigma3;
+	double noise1;
+	double noise2;
+	double noise3;
 	double Tcamp;
 	ofstream outFile;
-	//cOutVector timestampVec;
-	cOutVector sigma1Vec;
+	cOutVector noise1Vec;
+	cOutVector noise2Vec;
+	cOutVector noise3Vec;
 	cOutVector driftVec;
 	cOutVector offsetVec;
 };
@@ -63,7 +64,9 @@ void Clock::initialize(){
 	// Inizializzazione variabile per il salvataggio dei dati in uscita.
 	// ---------------------------------------------------------------------------
 	//timestampVec.setName("time value");
-	noiseVec.setName("sigma1");
+	noise1Vec.setName("noise1");
+	noise2Vec.setName("noise2");
+	noise3Vec.setName("noise3");
 	driftVec.setName("drift");
 	offsetVec.setName("offset");
 
@@ -81,8 +84,8 @@ void Clock::initialize(){
 	// ---------------------------------------------------------------------------
 	// Lettura parametri di ingresso.
 	// ---------------------------------------------------------------------------
-	phyclock = servoclock = 0;
-	origine = SIMTIME_DBL(simTime());
+	phyclock = softclock = 0;
+	lastupdatetime = SIMTIME_DBL(simTime());
 	openfile();
 	// ---------------------------------------------------------------------------
 	// Inizializzazione del timer. Il timer viene ripristinato con un tempo fisso
@@ -102,10 +105,12 @@ void Clock::handleMessage(cMessage *msg){
 	// ---------------------------------------------------------------------------
 		//double temp = offset + (1+drift)*(SIMTIME_DBL(simTime())-origine)-SIMTIME_DBL(simTime());
 		//timestampVec.record(temp);
-		Phyclockupdate();
 		driftVec.record(drift);
 		offsetVec.record(offset);
-		noiseVec.record(sigma1);
+		noise1Vec.record(noise1);
+		noise2Vec.record(noise2);
+		noise3Vec.record(noise3);
+		Phyclockupdate();
 		if(!outFile){
 			ev << "CLOCK: Errore apertura file" << endl;
 		}else{
@@ -146,43 +151,46 @@ void Clock::handleMessage(cMessage *msg){
 }
 // TODo:adding Phyclockupdate()
 double Clock::Phyclockupdate(){
-	drift = drift + sigma2;
-	offset = offset + drift*(SIMTIME_DBL(simTime())-lastupdatatime)+ sigma1;
+	ev<<"update Phyclock&offset:"<<endl;
+	noise2 =  normal(0,sigma2);
+	drift = drift + noise2;
+	noise1 =  normal(0,sigma1);
+	offset = offset + drift*(SIMTIME_DBL(simTime())-lastupdatetime)+ noise1;
 	phyclock = offset + SIMTIME_DBL(simTime());
-	lastupdatatime = SIMTIME_DBL(simTime());
+	lastupdatetime = SIMTIME_DBL(simTime());
+	ev<<"simTime=lastupdatetime="<<SIMTIME_DBL(simTime())<<endl;
     return phyclock;
 }
 double Clock::getTimestamp(){
-	// ---------------------------------------------------------------------------
-	// Modello di timestamping + clock.
-	// ---------------------------------------------------------------------------
-	// Modello del clock
-	//double clock = offset + (1+drift)*(SIMTIME_DBL(simTime())-origine);
 	//TODO:Modify
-	offset = offset + drift*(SIMTIME_DBL(simTime())-lastupdatatime)+ sigma1;
-	double clock = offset + SIMTIME_DBL(simTime());
-	// Modello di timestamping
-	//noise = normal(0,sigma);
-	//if(bernoulli(p)==1){
-		// Simulazione degli spike.
-		//noise = noise + delta;
-	//}
-	return clock + sigma3;
+	double clock;
+	ev<<"getTimestamp:"<<endl;
+	ev<<"simTime="<<SIMTIME_DBL(simTime())<<" lastupdatetime="<<lastupdatetime<<endl;
+	if(lastupdatetime == SIMTIME_DBL(simTime()))
+	{
+		clock = phyclock;
+	}
+	else
+	{
+		noise1 = normal(0,sigma1);
+		//TODO:Error or Right?
+		clock = offset + drift*(SIMTIME_DBL(simTime())-lastupdatetime)+ noise1 + SIMTIME_DBL(simTime());
+	}
+	noise3 = normal(0,sigma3);
+	softclock = clock + noise3;
+	return softclock;
 }
-
+//TODO: Problem at 182 offset=offset-value?
 void Clock::adjtimex(double value, int type){
 	switch(type){
 	case 0: //offset
-		//offset = offset - value;
 		ev << "---------------------------------" << endl;
 		ev << "CLOCK : AGGIORNAMENTO OFFSET" << endl;
 		ev << "CLOCK : offset- = " << offset;
-		//offset = offset + (1+drift)*(SIMTIME_DBL(simTime())-origine) - value;
-		offset = offset + drift*(SIMTIME_DBL(simTime())-lastupdatatime)+ sigma1 - value;
+		ev<<"simTime="<<SIMTIME_DBL(simTime())<<" lastupdatetime="<<lastupdatetime<<endl;
+		//TODO:Error or Right? offset update?? simTime is varying.
+		offset = offset + drift*(SIMTIME_DBL(simTime())-lastupdatetime)+ noise1 -value;
 		ev << " offset+ = " << offset << endl;
-		ev << "CLOCK : origine- = " << origine;
-		origine = SIMTIME_DBL(simTime());
-		ev << " origine+ = " << origine << endl;
 		break;
 	case 1: //drift
 		drift = drift - value;
@@ -198,7 +206,7 @@ void Clock::finish(){
 void Clock::updateDisplay(){
 	char buf[100];
 	sprintf(buf, "offset [msec]: %3.2f   \ndrift [ppm]: %3.2f \norigine: %3.2f",
-		offset,drift*1E6,origine);
+		offset,drift*1E6,lastupdatetime);
 	getDisplayString().setTagArg("t",0,buf);
 }
 
