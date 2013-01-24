@@ -180,7 +180,6 @@ double Clock::getTimestamp(){
 	softclock = clock + noise3;
 	return softclock;
 }
-
 //TODO: Problem at 182 offset=offset-value?
 void Clock::adjtimex(double value, int type){
 	switch(type){
