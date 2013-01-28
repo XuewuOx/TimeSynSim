@@ -25,6 +25,7 @@ This file is part of X-Simulator.
 using namespace std;
 
 
+
 class Clock:public cSimpleModule{
 protected:
 	virtual void initialize();
@@ -40,6 +41,8 @@ private:
 	double lastupdatetime;
 	double phyclock;
 	double softclock;
+	double softclock_t2;
+	double softclock_t3;
 	double offset;
 	double drift;
 	double sigma1;
@@ -50,6 +53,9 @@ private:
 	double noise3;
 	double Tcamp;
 	ofstream outFile;
+	cOutVector softclockVec;
+	cOutVector softclock_t2Vec;
+	cOutVector softclock_t3Vec;
 	cOutVector noise1Vec;
 	cOutVector noise2Vec;
 	cOutVector noise3Vec;
@@ -64,6 +70,9 @@ void Clock::initialize(){
 	// Inizializzazione variabile per il salvataggio dei dati in uscita.
 	// ---------------------------------------------------------------------------
 	//timestampVec.setName("time value");
+	softclockVec.setName("softclock");
+	softclock_t2Vec.setName("softclock_t2");
+	softclock_t3Vec.setName("softclock_t3");
 	noise1Vec.setName("noise1");
 	noise2Vec.setName("noise2");
 	noise3Vec.setName("noise3");
@@ -84,8 +93,8 @@ void Clock::initialize(){
 	// ---------------------------------------------------------------------------
 	// Lettura parametri di ingresso.
 	// ---------------------------------------------------------------------------
-	phyclock = softclock = 0;
 	lastupdatetime = SIMTIME_DBL(simTime());
+	phyclock = softclock = offset;
 	openfile();
 	// ---------------------------------------------------------------------------
 	// Inizializzazione del timer. Il timer viene ripristinato con un tempo fisso
@@ -128,12 +137,27 @@ void Clock::handleMessage(cMessage *msg){
 	// - un messaggio di tipo FREQ_ADJ, con il quale viene fatta una correzione del
 	//   tick rate del clock.
 	// ---------------------------------------------------------------------------
-		ev<<"A Packet received by clock.\n";
+		ev<<"A Packet received by clock to gettimestamp.\n";
 		switch(((Packet *)msg)->getClockType()){
 			case TIME_REQ:
 				ev<<"TIME_REQ Packet received by clock.\n";
 				msg->setName("TIME_RES");
-				msg->setTimestamp(getTimestamp());
+				//TODO:
+				switch(((Packet *)msg)->getPtpType()){
+				case SYNC:
+					ev<<"T2 gettimestamp"<<endl;
+					softclock_t2 = getTimestamp();
+					msg->setTimestamp(softclock_t2);
+					softclock_t2Vec.record(softclock_t2);
+					break;
+				case DREQ:
+					ev<<"T3 gettimestamp"<<endl;
+				    softclock_t3 = getTimestamp();
+					msg->setTimestamp(softclock_t3);
+					softclock_t3Vec.record(softclock_t3);
+					break;
+				}
+
 				((Packet *)msg)->setClockType(TIME_RES);
 				send((cMessage *)msg->dup(),"outclock");
 				break;
@@ -158,26 +182,19 @@ double Clock::Phyclockupdate(){
 	offset = offset + drift*(SIMTIME_DBL(simTime())-lastupdatetime)+ noise1;
 	phyclock = offset + SIMTIME_DBL(simTime());
 	lastupdatetime = SIMTIME_DBL(simTime());
+	ev<<"offset="<<offset<<endl;
 	ev<<"simTime=lastupdatetime="<<SIMTIME_DBL(simTime())<<endl;
     return phyclock;
 }
 double Clock::getTimestamp(){
 	//TODO:Modify
-	double clock;
 	ev<<"getTimestamp:"<<endl;
 	ev<<"simTime="<<SIMTIME_DBL(simTime())<<" lastupdatetime="<<lastupdatetime<<endl;
-	if(lastupdatetime == SIMTIME_DBL(simTime()))
-	{
-		clock = phyclock;
-	}
-	else
-	{
-		noise1 = normal(0,sigma1);
-		//TODO:Error or Right?
-		clock = offset + drift*(SIMTIME_DBL(simTime())-lastupdatetime)+ noise1 + SIMTIME_DBL(simTime());
-	}
+	double clock = offset + drift*(SIMTIME_DBL(simTime())-lastupdatetime) + SIMTIME_DBL(simTime());
 	noise3 = normal(0,sigma3);
 	softclock = clock + noise3;
+	softclockVec.record(softclock);
+	//ev.printf("phyclock_float=%8f",phyclock_float);
 	return softclock;
 }
 //TODO: Problem at 182 offset=offset-value?
@@ -186,14 +203,14 @@ void Clock::adjtimex(double value, int type){
 	case 0: //offset
 		ev << "---------------------------------" << endl;
 		ev << "CLOCK : AGGIORNAMENTO OFFSET" << endl;
-		ev << "CLOCK : offset- = " << offset;
+		ev << "CLOCK : offset- = " << offset<<endl;
 		ev<<"simTime="<<SIMTIME_DBL(simTime())<<" lastupdatetime="<<lastupdatetime<<endl;
-		//TODO:Error or Right? offset update?? simTime is varying.
-		offset = offset + drift*(SIMTIME_DBL(simTime())-lastupdatetime)+ noise1 -value;
+		offset = offset - value;
 		ev << " offset+ = " << offset << endl;
 		break;
 	case 1: //drift
 		drift = drift - value;
+		ev<<"drift="<<drift<<endl;
 		break;
 	}
 }
