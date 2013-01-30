@@ -61,6 +61,7 @@ private:
 	cOutVector noise3Vec;
 	cOutVector driftVec;
 	cOutVector offsetVec;
+
 };
 
 Define_Module(Clock);
@@ -216,6 +217,7 @@ void Clock::adjtimex(double value, int type){
 }
 
 void Clock::finish(){
+	recordScalar("measure Uncertainty",softclock);
 	closefile();
 }
 

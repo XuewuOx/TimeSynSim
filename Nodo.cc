@@ -178,13 +178,10 @@ void Nodo::servo_clock(){
 	dprop = (dms + dsm)/2;
 	offset = dms - dprop;
 	ev<<"offset="<<offset<<endl;
-    double alpha = 1;
-    double beta = 64;
+    double alpha = 32;
+    double beta = 32;
     double y =offset/alpha;
 	ev<<"y="<<y<<endl;
-	double alpha = 1;
-	double beta = 64;
-	double y =offset/alpha;
 	Packet *pck = new Packet("ADJ_OFFSET");
 	pck->setPckType(CLOCK);
 	pck->setClockType(OFFSET_ADJ);
@@ -202,6 +199,7 @@ void Nodo::servo_clock(){
 		pckd->setPckType(CLOCK);
 		pckd->setClockType(FREQ_ADJ);
 		pckd->setData(drift/beta);
+		ev<<"drift="<<drift<<endl;
 		send(pckd,"outclock");
 	}
 	Tm_previous = Tm;

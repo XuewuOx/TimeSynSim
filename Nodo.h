@@ -35,8 +35,7 @@ private:
 	void handleSelfMessage(cMessage *msg);
 	void handleClockMessage(cMessage *msg);
 	void handleMasterMessage(cMessage *msg);
-	void handleDelayResponse();
-	void handleSync();
+	void ProduceT3packet();
 	void handleOtherPacket(cMessage *msg);
 	void handleEventMessage(cMessage *msg);
 	void servo_clock();
